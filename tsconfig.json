@@ -1,0 +1,22 @@
+{
+	"compilerOptions": {
+		"target": "ESNext",
+		"lib": ["ESNext", "DOM"],
+		"moduleDetection": "force",
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"resolveJsonModule": true,
+		// "types": ["@vitest/browser/providers/playwright"],
+		"strict": true,
+		"strictNullChecks": true,
+		"noUnusedLocals": true,
+		"declaration": true,
+		"isolatedDeclarations": true,
+		"esModuleInterop": true,
+		"isolatedModules": true,
+		"verbatimModuleSyntax": true,
+		"skipLibCheck": true,
+		"erasableSyntaxOnly": true
+	},
+	"include": ["src", "tests"]
+}

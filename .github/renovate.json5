@@ -1,0 +1,4 @@
+{
+	extends: ["github>ianduvall/renovate-config"],
+	automerge: true,
+}
