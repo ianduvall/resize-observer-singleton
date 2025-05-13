@@ -37,17 +37,20 @@ export class SharedResizeObserver {
 	observe = <TElement extends Element>(
 		target: TElement,
 		handler: ResizeHandler<TElement>,
-	): void => {
+	): (() => void) => {
+		const unobserve = () => this.unobserve(target, handler as ResizeHandler);
 		const existingObservers = this.#observers.get(target);
 		if (existingObservers) {
 			existingObservers.add(handler as ResizeHandler);
-			return;
+			return unobserve;
 		}
 
 		this.#observers.set(target, new Set([handler as ResizeHandler]));
 		this.#observer.observe(target, {
 			box: this.box,
 		});
+
+		return unobserve;
 	};
 
 	unobserve = (target: Element, handler: ResizeHandler): void => {
