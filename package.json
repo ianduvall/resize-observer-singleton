@@ -1,6 +1,6 @@
 {
 	"name": "resize-observer-singleton",
-	"version": "0.0.1",
+	"version": "0.0.2",
 	"packageManager": "pnpm@10.10.0",
 	"description": "A singleton wrapper for the ResizeObserver API to optimize performance and simplify usage.",
 	"type": "module",
