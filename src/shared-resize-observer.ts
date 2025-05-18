@@ -7,7 +7,7 @@ type ResizeHandler<TElement extends Element = Element> = (
 
 export class SharedResizeObserver {
 	box: ResizeObserverBoxOptions;
-	#observers: WeakMap<Element, Set<ResizeHandler>>;
+	#observers: WeakMap<Element, Array<ResizeHandler>>;
 	#observer: ResizeObserver;
 
 	constructor({
@@ -39,13 +39,13 @@ export class SharedResizeObserver {
 		handler: ResizeHandler<TElement>,
 	): (() => void) => {
 		const unobserve = () => this.unobserve(target, handler as ResizeHandler);
-		const existingObservers = this.#observers.get(target);
-		if (existingObservers) {
-			existingObservers.add(handler as ResizeHandler);
+		const observers = this.#observers.get(target);
+		if (observers) {
+			observers.push(handler as ResizeHandler);
 			return unobserve;
 		}
 
-		this.#observers.set(target, new Set([handler as ResizeHandler]));
+		this.#observers.set(target, [handler as ResizeHandler]);
 		this.#observer.observe(target, {
 			box: this.box,
 		});
@@ -59,9 +59,12 @@ export class SharedResizeObserver {
 			return;
 		}
 
-		handlers.delete(handler);
+		const idx = handlers.indexOf(handler);
+		if (idx !== -1) {
+			handlers.splice(idx, 1);
+		}
 
-		if (handlers.size === 0) {
+		if (handlers.length === 0) {
 			this.#observer.unobserve(target);
 			this.#observers.delete(target);
 		}
