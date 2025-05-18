@@ -20,7 +20,10 @@ export class SharedResizeObserver {
 		this.box = box;
 		this.#observers = new WeakMap();
 		const Implementation = implementation || ResizeObserver;
-		this.#observer = new Implementation((entries, observer) => {
+		const resizeObserverCallback: ResizeObserverCallback = (
+			entries,
+			observer,
+		) => {
 			for (const entry of entries) {
 				const handlers = this.#observers.get(entry.target);
 				if (!handlers) {
@@ -31,7 +34,8 @@ export class SharedResizeObserver {
 					handler(entry);
 				}
 			}
-		});
+		};
+		this.#observer = new Implementation(resizeObserverCallback);
 	}
 
 	observe = <TElement extends Element>(

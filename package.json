@@ -33,6 +33,7 @@
 		"lint:fix": "pnpm run lint --fix",
 		"build": "tsdown",
 		"dev": "tsdown --watch",
+		"demo": "pnpm run build && pnpx serve",
 		"test": "vitest run",
 		"test:dev": "vitest dev",
 		"typecheck": "tsc --noEmit",

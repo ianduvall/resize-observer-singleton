@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>ResizeObserver Singleton Performance Demo</title>
+		<style>
+			* {
+				box-sizing: border-box;
+			}
+			body {
+				font-family:
+					-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+				margin: 0;
+				padding: 20px;
+				max-width: 1200px;
+				margin: 0 auto;
+				display: flex;
+				flex-direction: column;
+				gap: 1.5rem;
+			}
+			h1,
+			h2,
+			h3 {
+				margin: 0;
+			}
+			.test-container {
+				display: flex;
+				flex-direction: column;
+				gap: 1rem;
+			}
+			.test-area {
+				flex: 1;
+				min-width: 300px;
+				border: 1px solid #ccc;
+				border-radius: 0.5rem;
+				padding: 1rem;
+				background-color: #f9f9f9;
+			}
+			.box-container {
+				display: grid;
+				grid-template-columns: repeat(10, 1fr);
+				grid-auto-rows: 1rem;
+				gap: 1px;
+			}
+			.resizable-box {
+				background-color: #3498db;
+				border: 1px solid #04283f;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				color: white;
+				font-weight: bold;
+				transition: background-color 0.3s;
+				position: relative;
+				font-size: 0.5rem;
+			}
+			.resizable-box:hover {
+				background-color: #2980b9;
+			}
+			.controls {
+				display: flex;
+				flex-direction: column;
+				gap: 0.5rem;
+				padding: 1rem;
+				background-color: #f0f0f0;
+				border-radius: 0.5rem;
+			}
+			button {
+				padding: 0.5rem 1rem;
+				background-color: #4caf50;
+				color: white;
+				border: none;
+				border-radius: 0.25rem;
+				cursor: pointer;
+			}
+			button:hover {
+				background-color: #388e3c;
+			}
+			.metrics {
+				font-family: monospace;
+				white-space: pre;
+				background-color: #f5f5f5;
+				padding: 1rem;
+				border-radius: 0.25rem;
+				overflow-x: auto;
+			}
+		</style>
+		<script type="importmap">
+			{
+				"imports": {
+					"resize-observer-singleton": "./dist/index.js"
+				}
+			}
+		</script>
+	</head>
+
+	<body>
+		<h1>ResizeObserver Singleton Performance Demo</h1>
+
+		<div class="controls">
+			<h3>Test Configuration</h3>
+			<div>
+				<label>Number of boxes: <span id="box-count-display">10</span></label>
+				<div id="box-count-radios">
+					<label><input type="radio" name="box-count" value="10" />10</label>
+					<label>
+						<input
+							type="radio"
+							name="box-count"
+							value="100"
+							checked
+						/>100</label
+					>
+					<label
+						><input type="radio" name="box-count" value="1000" />1,000</label
+					>
+					<label
+						><input type="radio" name="box-count" value="10000" />10,000</label
+					>
+					<label
+						><input
+							type="radio"
+							name="box-count"
+							value="100000"
+						/>100,000</label
+					>
+				</div>
+			</div>
+			<div>
+				<label>Handlers per box:</label>
+				<span id="handlers-display">1</span>
+				<div id="handlers-per-box-radios">
+					<label
+						><input type="radio" name="handlers-per-box" value="1" checked />
+						1</label
+					>
+					<label
+						><input type="radio" name="handlers-per-box" value="10" /> 10</label
+					>
+					<label
+						><input type="radio" name="handlers-per-box" value="100" />
+						100</label
+					>
+				</div>
+			</div>
+			<div>
+				<label>
+					<input type="checkbox" id="use-singleton" checked />
+					Use ResizeObserver Singleton
+				</label>
+			</div>
+			<div>
+				<button id="resize-container">Resize Container</button>
+				<button id="reset-metrics">Reset Metrics</button>
+			</div>
+		</div>
+
+		<section>
+			<h3>Performance Metrics</h3>
+			<div class="metrics" id="metrics-display"></div>
+		</section>
+
+		<div class="test-container">
+			<div class="test-area">
+				<h2>Test Area</h2>
+				<p id="implementation-description">
+					Using ResizeObserverSingleton implementation
+				</p>
+				<div id="box-container" class="box-container"></div>
+			</div>
+		</div>
+
+		<script type="module">
+			import { ResizeObserverSingleton } from "resize-observer-singleton";
+
+			// Test configuration
+			let boxCount = 100;
+			let handlersPerBox = 1;
+			let useSingleton = true; // Default to use singleton
+			const boxCountRadios = document.getElementById("box-count-radios");
+			const handlersRadios = document.getElementById("handlers-per-box-radios");
+			const boxCountDisplay = document.getElementById("box-count-display");
+			const handlersDisplay = document.getElementById("handlers-display");
+			const useSingletonInput = document.getElementById("use-singleton");
+			const resizeContainerBtn = document.getElementById("resize-container");
+			const resetMetricsBtn = document.getElementById("reset-metrics");
+			const boxContainer = document.getElementById("box-container");
+			const implementationDescription = document.getElementById(
+				"implementation-description",
+			);
+			const metricsDisplay = document.getElementById("metrics-display");
+
+			// Track timing for resize callbacks
+			let resizeStartTime = null;
+			let resizeEndTime = null;
+			let resizeCallbacksPending = 0;
+
+			function resetResizeTiming() {
+				resizeStartTime = null;
+				resizeEndTime = null;
+				resizeCallbacksPending = 0;
+			}
+
+			// Update display values
+			boxCountRadios.addEventListener("change", (event) => {
+				if (event.target?.name !== "box-count") {
+					return;
+				}
+				boxCount = parseInt(event.target.value, 10);
+				boxCountDisplay.textContent = boxCount;
+				createAllBoxes();
+			});
+
+			handlersRadios.addEventListener("change", (event) => {
+				if (event.target?.name === "handlers-per-box") {
+					return;
+				}
+				handlersPerBox = parseInt(event.target.value);
+				handlersDisplay.textContent = handlersPerBox;
+				createAllBoxes();
+			});
+
+			useSingletonInput.addEventListener("change", () => {
+				useSingleton = useSingletonInput.checked;
+				updateDescription();
+				createAllBoxes();
+			});
+
+			function updateDescription() {
+				if (useSingleton) {
+					implementationDescription.textContent =
+						"Using ResizeObserverSingleton (all handlers share the same observer instance)";
+				} else {
+					implementationDescription.textContent =
+						"Using standard ResizeObserver (each handler creates its own instance)";
+				}
+			}
+
+			// Create a box with multiple resize handlers
+			function createBox(container, index) {
+				const box = document.createElement("div");
+				box.className = "resizable-box";
+				box.textContent = index + 1;
+				container.appendChild(box);
+
+				const handlers = [];
+
+				// Create handlers according to configuration
+				for (let i = 0; i < handlersPerBox; i++) {
+					if (useSingleton) {
+						// Singleton approach: use the shared ResizeObserver
+						const resizeObserver = ResizeObserverSingleton.getInstance();
+
+						const unobserve = resizeObserver.observe(
+							box,
+							function singletonResizeCallback(entry) {
+								if (resizeStartTime === null) {
+									resizeStartTime = performance.now();
+								}
+								resizeCallbacksPending++;
+								// Simulate same work in the callback
+								const dimensions = `${Math.round(entry.contentRect.width)}x${Math.round(entry.contentRect.height)}`;
+								resizeCallbacksPending--;
+								if (resizeCallbacksPending === 0) {
+									resizeEndTime = performance.now();
+									updateMetricsDisplay();
+								}
+							},
+						);
+
+						handlers.push(unobserve);
+					} else {
+						// Standard approach: create a new ResizeObserver for each handler
+						const observer = new ResizeObserver(function resizeObserverCallback(
+							entries,
+						) {
+							if (resizeStartTime === null) {
+								resizeStartTime = performance.now();
+							}
+							resizeCallbacksPending++;
+							for (const entry of entries) {
+								if (entry.target === box) {
+									// Simulate some work in the callback
+									const dimensions = `${Math.round(entry.contentRect.width)}x${Math.round(entry.contentRect.height)}`;
+								}
+							}
+							resizeCallbacksPending--;
+							if (resizeCallbacksPending === 0) {
+								resizeEndTime = performance.now();
+								updateMetricsDisplay();
+							}
+						});
+
+						observer.observe(box);
+						handlers.push(() => observer.disconnect());
+					}
+				}
+
+				// Store cleanup function
+				box.cleanup = () => {
+					handlers.forEach((cleanup) => cleanup());
+					container.removeChild(box);
+				};
+
+				return box;
+			}
+
+			// Create all boxes for the container
+			function createAllBoxes() {
+				// Clear existing boxes
+				clearAllBoxes();
+
+				// Reset timing
+				resetResizeTiming();
+
+				// Create boxes
+				for (let i = 0; i < boxCount; i++) {
+					createBox(boxContainer, i);
+				}
+
+				updateMetricsDisplay();
+			}
+
+			// Clear all boxes
+			function clearAllBoxes() {
+				while (boxContainer.firstChild) {
+					if (boxContainer.firstChild.cleanup) {
+						boxContainer.firstChild.cleanup();
+					} else {
+						boxContainer.removeChild(boxContainer.firstChild);
+					}
+				}
+
+				// Force garbage collection if possible
+				window.gc?.();
+			}
+
+			// Resize the container
+			function resizeContainer() {
+				resetResizeTiming();
+				const width = 50 + Math.random() * 50;
+				boxContainer.style.width = `${width}%`;
+			}
+
+			// Reset metrics
+			function resetMetrics() {
+				resetResizeTiming();
+				updateMetricsDisplay();
+			}
+
+			// Update metrics display
+			function updateMetricsDisplay() {
+				let output = "";
+				if (resizeStartTime !== null && resizeEndTime !== null) {
+					output += `Resize callback duration: ${(resizeEndTime - resizeStartTime).toFixed(2)}ms\n`;
+				} else {
+					output += "Resize callback duration: N/A\n";
+				}
+				metricsDisplay.textContent = output;
+			}
+
+			// Event listeners
+			resizeContainerBtn.addEventListener("click", resizeContainer);
+			resetMetricsBtn.addEventListener("click", resetMetrics);
+
+			// Initial setup
+			updateDescription();
+			const initialBoxCountRadio = boxCountRadios.querySelector(
+				'input[name="box-count"]:checked',
+			);
+			if (initialBoxCountRadio) {
+				boxCount = parseInt(initialBoxCountRadio.value);
+				boxCountDisplay.textContent = boxCount;
+			}
+			const initialHandlersRadio = handlersRadios.querySelector(
+				'input[name="handlers-per-box"]:checked',
+			);
+			if (initialHandlersRadio) {
+				handlersPerBox = parseInt(initialHandlersRadio.value);
+				handlersDisplay.textContent = handlersPerBox;
+			}
+			createAllBoxes();
+		</script>
+	</body>
+</html>
