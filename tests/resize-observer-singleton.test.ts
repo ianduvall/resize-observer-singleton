@@ -167,7 +167,7 @@ test("disconnect stops all observations", async () => {
 	expect(handler).toHaveBeenCalledTimes(0);
 });
 
-test("handlers are not deduplicated (observing an element twice with the same handler will call the handler twice)", async () => {
+test("observing the same element with the same handler multiple times only calls handler once", async () => {
 	const initialHeight = 100;
 	const element = document.createElement("div");
 	element.style.height = `${initialHeight}px`;
@@ -181,11 +181,13 @@ test("handlers are not deduplicated (observing an element twice with the same ha
 	resizeObserver.observe(element, handler);
 	await flushAndClearInitialResizeEvents(handler);
 
+	expect(handler).toHaveBeenCalledTimes(0);
+
 	element.style.height = `${initialHeight + 10}px`;
 
 	await vi.waitFor(
 		() => {
-			expect(handler).toHaveBeenCalledTimes(2);
+			expect(handler).toHaveBeenCalledTimes(1);
 		},
 		{ interval },
 	);
