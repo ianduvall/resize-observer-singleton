@@ -7,15 +7,15 @@ A singleton wrapper for the [ResizeObserver API](https://developer.mozilla.org/e
 
 ## Motivation
 
-The browser's built-in ResizeObserver API is powerful but can lead to performance issues when multiple observers are created for the same elements. Common scenarios where this happens include:
+The browser's built-in ResizeObserver API is powerful but can lead to performance issues when many observers are created, often one for each element to observe. Common scenarios where this happens include:
 
 - Multiple components independently observing the same DOM elements
 - Libraries that each create their own ResizeObserver instances
-- Complex UIs that need to react to size changes in various ways
+- Complex UIs that need to react to size changes of many elements
 
 This package solves these problems by:
 
-1. **Sharing a single ResizeObserver instance** across your application
+1. **Sharing a single ResizeObserver instance** across your application and libraries
 2. **Managing multiple handlers** for the same elements
 3. **Supporting different box options** with separate observer instances
 4. **Providing a clean disposal API** to prevent memory leaks
