@@ -12,11 +12,11 @@
 		"noUnusedLocals": true,
 		"declaration": true,
 		"isolatedDeclarations": true,
+		"erasableSyntaxOnly": true,
 		"esModuleInterop": true,
 		"isolatedModules": true,
 		"verbatimModuleSyntax": true,
-		"skipLibCheck": true,
-		"erasableSyntaxOnly": true
+		"skipLibCheck": true
 	},
 	"include": ["src", "tests"]
 }

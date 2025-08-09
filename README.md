@@ -169,6 +169,63 @@ const devicePixelObserver = ResizeObserverSingleton.getInstance(
 // Each will maintain its own shared ResizeObserver
 ```
 
-## License
+## Publishing / Releasing
 
-MIT
+This project uses semantic versioning and a simple release script powered by `bumpp` and `pnpm publish`.
+
+### Prerequisites
+
+- You have publish rights on npm for `resize-observer-singleton`
+- Node.js >= 20.18.0 (see `engines` in `package.json`)
+- Two‑factor auth (2FA) configured for npm (recommended)
+- A clean working tree (no uncommitted changes)
+
+### Standard Release Flow
+
+1. Update local main branch:
+   ```bash
+   git checkout main
+   git pull origin main --ff-only
+   pnpm install
+   ```
+2. Run quality gates locally (optional but recommended):
+   ```bash
+   pnpm run lint && pnpm test && pnpm run typecheck
+   ```
+3. Pick and publish a new version (interactive prompt will suggest bumps):
+   ```bash
+   pnpm run release
+   ```
+   What happens:
+   - `bumpp` updates `package.json` (and creates a git commit + tag)
+   - `prepublishOnly` runs `pnpm run build` (via `tsdown`)
+   - `pnpm publish` publishes the new `dist` output
+4. Push the commit + tag to GitHub (if you didn't choose auto‑push in the prompt):
+   ```bash
+   git push origin main --tags
+   ```
+
+### Choosing the Version
+
+Use semantic versioning:
+
+- Patch: bug fixes / internal changes (`0.0.x`)
+- Minor: backward compatible feature additions (`0.x.y` while <1.0.0 still considered minor enhancements)
+- Major: breaking changes (after 1.0.0; before 1.0.0 treat breaking changes as minor bump to the 0.x line if you prefer, or document clearly)
+
+### Dry Run / Verification
+
+To inspect what would be published without actually publishing:
+
+```bash
+pnpm run build
+pnpm publish --dry-run
+```
+
+Check the file list (only `dist` and expected metadata should appear).
+
+### If Something Goes Wrong
+
+- Tag created but publish failed: fix the issue, rebuild, then rerun `pnpm publish --tag <same-version>` (no version bump). If necessary, delete the tag locally + remotely (`git tag -d vX.Y.Z && git push origin :refs/tags/vX.Y.Z`) and redo the release.
+- Published but forgot to push tags: just run `git push origin --tags`.
+- Need to deprecate a version: `npm deprecate resize-observer-singleton@X.Y.Z "message"`.
